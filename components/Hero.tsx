@@ -10,7 +10,7 @@ const Hero3DScene = dynamic(() => import("./Hero3DScene"), { ssr: false });
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[100svh] overflow-hidden bg-transparent">
+    <section id="hero-section" className="relative min-h-[100svh] overflow-hidden bg-transparent">
       {/* 3D orbital scene */}
       <Hero3DScene />
 

@@ -8,17 +8,19 @@ import Image from "next/image";
 gsap.registerPlugin(ScrollTrigger);
 
 /**
- * Animated SACAR rocket logo.
+ * Rocket Logo Animation:
+ * 1. Flies from nav logo to "Book a session" button (lands pointing down)
+ * 2. Hovers above button with gentle bob
+ * 3. Travels vertically down to "What we do" section heading
+ * 4. Lands just before each diplomacy card heading (vertically, nose down)
+ * 5. Continues card by card until the last one, then fades out
  *
- * Strategy: position: fixed container so the rocket always stays in viewport.
- * We calculate WHERE the button will be in the viewport at the moment the
- * fly-in animation completes (i.e. at scroll=350px), and target that position.
+ * All movements are vertical & smooth. Rocket always faces downward (rotation: 180).
  */
 export default function RocketLogo3D() {
   const rocketRef = useRef<HTMLDivElement>(null);
   const trailRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -28,19 +30,21 @@ export default function RocketLogo3D() {
 
   useEffect(() => {
     if (!ready) return;
-    if (!rocketRef.current || !trailRef.current || !glowRef.current || !ringRef.current) return;
+    if (!rocketRef.current || !trailRef.current || !glowRef.current) return;
 
     const rocket = rocketRef.current;
     const trail = trailRef.current;
     const glow = glowRef.current;
-    const ring = ringRef.current;
 
-    // ─── Measure current positions ───
     const scrollY = window.scrollY;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    // Nav logo: fixed element → viewport coords are stable
+    // ─── Measurements ───
+
+    // Nav logo (fixed)
     const navLogo = document.querySelector("nav a img") as HTMLElement;
-    let startVX = 48; // fallback
+    let startVX = 48;
     let startVY = 40;
     if (navLogo) {
       const r = navLogo.getBoundingClientRect();
@@ -48,23 +52,15 @@ export default function RocketLogo3D() {
       startVY = r.top + r.height / 2;
     }
 
-    // Button: scrollable element. Get its DOCUMENT position, then compute
-    // where it'll be in the viewport at specific scroll values.
+    // CTA button
     const btn = document.getElementById("hero-cta-btn");
-    let btnDocY = window.innerHeight * 0.78 + scrollY;
-    let btnDocX = window.innerWidth / 2;
+    let btnDocY = vh * 0.78 + scrollY;
+    let btnDocX = vw / 2;
     if (btn) {
       const r = btn.getBoundingClientRect();
       btnDocX = r.left + r.width / 2;
       btnDocY = r.top + scrollY + r.height / 2;
     }
-
-    // Button viewport position at a given scroll value:
-    // btnViewportY(s) = btnDocY - s
-    // At scroll=350 (end of fly-in): btnViewportY = btnDocY - 350
-    const flyInEnd = 350;
-    const btnVYatArrival = btnDocY - flyInEnd;
-    const btnVXatArrival = btnDocX;
 
     const mm = gsap.matchMedia();
 
@@ -80,13 +76,14 @@ export default function RocketLogo3D() {
         };
 
         const rocketSize = isDesktop ? 72 : 54;
-        const orbitR = isDesktop ? 50 : 36;
+        const centerX = vw / 2;
 
-        // Target: above the button at the moment of arrival
-        const targetVX = btnVXatArrival;
-        const targetVY = btnVYatArrival - rocketSize / 2 - 12;
+        // Button viewport Y at end of fly-in (scroll 350px)
+        const flyInEnd = 350;
+        const btnVY = btnDocY - flyInEnd;
+        const targetVY = btnVY - rocketSize / 2 - 10;
 
-        // ─── Initial state: over the nav logo ───
+        // ─── Initial state: at nav logo, invisible, pointing right (will rotate to down) ───
         gsap.set(rocket, {
           opacity: 0,
           left: startVX,
@@ -96,19 +93,18 @@ export default function RocketLogo3D() {
           x: 0,
           y: 0,
           rotation: 0,
-          scale: 0.9,
+          scale: 0.8,
           width: rocketSize,
           height: rocketSize,
         });
         gsap.set(trail, { opacity: 0, scaleY: 0 });
         gsap.set(glow, { opacity: 0, scale: 0.4 });
-        gsap.set(ring, { opacity: 0, scale: 0.5 });
 
-        // ─── Phase 1: Fly from nav logo to above button ───
-        // The rocket stays in fixed space; the button is scrolling up.
-        // We animate the rocket from (startVX, startVY) to (targetVX, targetVY)
-        // where targetVY accounts for the button having scrolled up by 350px.
-        const flyInTl = gsap.timeline({
+        // ═══════════════════════════════════════════
+        // PHASE 1: Fly from nav logo → above CTA button
+        // Scroll: 1px → 350px
+        // ═══════════════════════════════════════════
+        const phase1 = gsap.timeline({
           scrollTrigger: {
             trigger: document.body,
             start: "1px top",
@@ -117,145 +113,183 @@ export default function RocketLogo3D() {
           },
         });
 
-        flyInTl
-          .to(rocket, { opacity: 1, duration: 0.05 }, 0)
-          .to(
-            rocket,
-            {
-              left: targetVX,
-              top: targetVY,
-              rotation: 180,
-              scale: 1,
-              ease: "power1.inOut",
-              duration: 1,
-            },
-            0
-          )
-          .to(trail, { opacity: 0.5, scaleY: 1, duration: 0.3 }, 0)
-          .to(glow, { opacity: 0.7, scale: 1, duration: 0.4 }, 0.1)
-          .to(trail, { opacity: 0, scaleY: 0, duration: 0.2 }, 0.7)
-          .to(ring, { opacity: 0.35, scale: 1, duration: 0.2 }, 0.8);
+        phase1
+          .to(rocket, { opacity: 1, duration: 0.04 }, 0)
+          .to(rocket, {
+            left: btnDocX,
+            top: targetVY,
+            rotation: 180, // nose pointing DOWN
+            scale: 1,
+            ease: "power1.inOut",
+            duration: 1,
+          }, 0)
+          .to(trail, { opacity: 0.5, scaleY: 1, duration: 0.25 }, 0)
+          .to(glow, { opacity: 0.6, scale: 1, duration: 0.4 }, 0.1)
+          .to(trail, { opacity: 0, scaleY: 0, duration: 0.2 }, 0.75);
 
-        // ─── Phase 2: Follow button + float (scroll 350→750px) ───
-        // After arrival, as user continues scrolling, the button keeps moving up.
-        // We need the rocket to track it (move up at same rate as scroll).
-        // Over 400px of scroll, button moves up 400px → rocket top decreases by 400px.
-        const followTl = gsap.timeline({
+        // ═══════════════════════════════════════════
+        // PHASE 2: Hover above button (gentle bob, follow scroll)
+        // Scroll: 350px → 800px
+        // ═══════════════════════════════════════════
+        const phase2 = gsap.timeline({
           scrollTrigger: {
             trigger: document.body,
             start: `${flyInEnd}px top`,
-            end: "750px top",
+            end: "800px top",
             scrub: 1,
           },
         });
 
-        followTl.to(rocket, {
-          top: targetVY - (750 - flyInEnd),
+        // Follow the button as it scrolls up
+        phase2.to(rocket, {
+          top: targetVY - (800 - flyInEnd),
           ease: "none",
           duration: 1,
         });
 
-        // Float animation (continuous, time-based)
+        // Gentle float (time-based)
         const floatAnim = gsap.timeline({ repeat: -1, yoyo: true, paused: true });
-        floatAnim.to(rocket, {
-          y: isDesktop ? -14 : -9,
-          duration: 1.4,
-          ease: "sine.inOut",
-        });
+        floatAnim.to(rocket, { y: -10, duration: 1.3, ease: "sine.inOut" });
 
         const glowPulse = gsap.timeline({ repeat: -1, yoyo: true, paused: true });
-        glowPulse.to(glow, {
-          opacity: 0.35,
-          scale: 1.15,
-          duration: 1.8,
-          ease: "sine.inOut",
-        });
+        glowPulse.to(glow, { opacity: 0.35, scale: 1.1, duration: 1.6, ease: "sine.inOut" });
 
         ScrollTrigger.create({
           trigger: document.body,
           start: `${flyInEnd}px top`,
-          end: "750px top",
-          onEnter: () => {
-            floatAnim.play();
-            glowPulse.play();
-          },
-          onLeaveBack: () => {
-            floatAnim.pause();
-            glowPulse.pause();
-            gsap.to(rocket, { y: 0, duration: 0.25 });
-          },
-          onLeave: () => {
-            floatAnim.pause();
-            glowPulse.pause();
-            gsap.to(rocket, { y: 0, duration: 0.2 });
-          },
+          end: "800px top",
+          onEnter: () => { floatAnim.play(); glowPulse.play(); },
+          onLeaveBack: () => { floatAnim.pause(); glowPulse.pause(); gsap.to(rocket, { y: 0, duration: 0.3 }); },
+          onLeave: () => { floatAnim.pause(); glowPulse.pause(); gsap.to(rocket, { y: 0, duration: 0.2 }); },
         });
 
-        // ─── Phase 3: Orbit (scroll 750→1250px) ───
-        // Continue following + orbit around button center
-        const orbitTl = gsap.timeline({
+        // ═══════════════════════════════════════════
+        // PHASE 3: Travel vertically down to Diplomacy section
+        // Trigger: Diplomacy section enters viewport
+        // ═══════════════════════════════════════════
+        const diplomacySection = document.getElementById("diplomacy-framework");
+        if (!diplomacySection) return;
+
+        // Fly down to center of viewport heading area
+        const toDiploTl = gsap.timeline({
           scrollTrigger: {
-            trigger: document.body,
-            start: "750px top",
-            end: "1250px top",
-            scrub: 1.5,
+            trigger: diplomacySection,
+            start: "top 95%",
+            end: "top 50%",
+            scrub: 2,
           },
         });
 
-        // During orbit, button continues scrolling up by 500px more
-        // Orbit center offset: button center is ~(rocketSize/2 + 12) below rocket rest
-        const orbitCenterOffset = rocketSize / 2 + 12;
-        const orbitScrollRange = 500;
-        const steps = 16;
-        for (let i = 1; i <= steps; i++) {
-          const angle = (i / steps) * Math.PI * 2;
-          const ox = Math.sin(angle) * orbitR;
-          const oy = orbitCenterOffset - Math.cos(angle) * orbitR;
-          // Follow scroll: button moves up proportionally
-          const scrollFollow = -(orbitScrollRange * (i / steps));
-          orbitTl.to(
-            rocket,
-            {
-              x: ox,
-              y: oy,
-              top: targetVY - (750 - flyInEnd) + scrollFollow,
-              rotation: 180 + (360 * i) / steps,
-              duration: 1 / steps,
-              ease: "none",
+        toDiploTl
+          .to(rocket, {
+            left: centerX,
+            top: "22%", // near the "What we do" heading
+            x: 0,
+            y: 0,
+            rotation: 180,
+            scale: 1,
+            ease: "power2.inOut",
+            duration: 1,
+          }, 0)
+          .to(trail, { opacity: 0.4, scaleY: 1, duration: 0.3 }, 0)
+          .to(glow, { opacity: 0.6, scale: 1, duration: 0.4 }, 0)
+          .to(trail, { opacity: 0, scaleY: 0, duration: 0.2 }, 0.7);
+
+        // ═══════════════════════════════════════════
+        // PHASE 4: Land at each card's heading, one by one
+        // The rocket travels to just above each card's text heading,
+        // then continues to the next card.
+        // ═══════════════════════════════════════════
+        const cardIds = ["tech", "legal", "affairs", "gov", "geo", "power", "diplo", "ir"];
+
+        cardIds.forEach((cardId, idx) => {
+          const card = diplomacySection.querySelector(`.diplomacy-card-${cardId}`);
+          if (!card) return;
+
+          // Get the text element for this card
+          const textEl = card.querySelector(`.diplomacy-text-${cardId}`) as HTMLElement;
+          if (!textEl) return;
+
+          const isEven = idx % 2 === 0;
+
+          // On desktop: text is on the side opposite the image
+          // Even cards: image left, text right → rocket goes left of text
+          // Odd cards: image right, text left → rocket goes right of text
+          // On mobile: text is always below image, centered
+          const textLeft = isDesktop
+            ? (isEven ? "62%" : "32%")
+            : "50%";
+
+          // Rocket lands just above the heading text, centered on it
+          const landTl = gsap.timeline({
+            scrollTrigger: {
+              trigger: card,
+              start: "top 75%",
+              end: "top 35%",
+              scrub: 2,
             },
-            (i - 1) / steps
-          );
-        }
+          });
 
-        // ─── Phase 4: Fly away ───
-        const flyOutTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: document.body,
-            start: "1250px top",
-            end: "1550px top",
-            scrub: 1,
-          },
-        });
-
-        flyOutTl
-          .to(
-            rocket,
-            {
-              opacity: 0,
-              left: window.innerWidth + 80,
-              top: "15%",
+          landTl
+            .to(rocket, {
+              left: textLeft,
+              top: "38%",
               x: 0,
               y: 0,
-              rotation: -20,
-              scale: 0.15,
+              rotation: 180, // always nose down
+              scale: idx === 6 ? 1.1 : 1, // bigger for featured
+              ease: "power2.inOut",
+              duration: 1,
+            }, 0)
+            .to(trail, { opacity: 0.35, scaleY: 1, duration: 0.2 }, 0)
+            .to(glow, {
+              opacity: idx === 6 ? 0.8 : 0.5,
+              scale: idx === 6 ? 1.2 : 1,
+              duration: 0.5,
+            }, 0)
+            .to(trail, { opacity: 0, scaleY: 0, duration: 0.2 }, 0.7);
+
+          // Landing effect: slight bounce when arriving
+          const bounceTl = gsap.timeline({
+            scrollTrigger: {
+              trigger: card,
+              start: "top 35%",
+              end: "top 25%",
+              scrub: 1,
+            },
+          });
+
+          bounceTl
+            .to(rocket, { y: 6, scale: 1.05, duration: 0.5, ease: "power2.out" })
+            .to(rocket, { y: 0, scale: idx === 6 ? 1.1 : 1, duration: 0.5, ease: "elastic.out(1, 0.5)" });
+        });
+
+        // ═══════════════════════════════════════════
+        // PHASE 5: Fade out after last card
+        // ═══════════════════════════════════════════
+        const lastCard = diplomacySection.querySelector(".diplomacy-card-ir");
+        if (lastCard) {
+          const fadeOut = gsap.timeline({
+            scrollTrigger: {
+              trigger: lastCard,
+              start: "bottom 50%",
+              end: "bottom 10%",
+              scrub: 1.5,
+            },
+          });
+
+          fadeOut
+            .to(rocket, {
+              opacity: 0,
+              top: "-5%",
+              scale: 0.3,
+              rotation: 180,
               ease: "power2.in",
               duration: 1,
-            },
-            0
-          )
-          .to(glow, { opacity: 0, scale: 0.2, duration: 0.3 }, 0)
-          .to(ring, { opacity: 0, scale: 0.2, duration: 0.3 }, 0)
-          .to(trail, { opacity: 0, duration: 0.2 }, 0);
+            }, 0)
+            .to(glow, { opacity: 0, scale: 0.3, duration: 0.4 }, 0)
+            .to(trail, { opacity: 0, duration: 0.3 }, 0);
+        }
 
         return () => {
           floatAnim.kill();
@@ -285,12 +319,12 @@ export default function RocketLogo3D() {
         {/* Glow */}
         <div
           ref={glowRef}
-          className="absolute -inset-4 md:-inset-5"
+          className="absolute -inset-5 md:-inset-6"
           style={{
             background:
-              "radial-gradient(circle, rgba(192,192,192,0.22) 0%, rgba(192,192,192,0.06) 45%, transparent 70%)",
-            filter: "blur(7px)",
-            transform: "translateZ(-8px)",
+              "radial-gradient(circle, rgba(192,192,192,0.22) 0%, rgba(192,192,192,0.05) 50%, transparent 70%)",
+            filter: "blur(8px)",
+            transform: "translateZ(-10px)",
           }}
         />
 
@@ -298,9 +332,9 @@ export default function RocketLogo3D() {
         <div
           className="relative w-full h-full"
           style={{
-            transform: "rotateX(8deg) rotateY(-4deg) translateZ(12px)",
+            transform: "rotateX(6deg) rotateY(-3deg) translateZ(12px)",
             filter:
-              "drop-shadow(0 0 7px rgba(192,192,192,0.4)) drop-shadow(0 0 16px rgba(192,192,192,0.12)) drop-shadow(0 2px 8px rgba(0,0,0,0.5))",
+              "drop-shadow(0 0 8px rgba(192,192,192,0.4)) drop-shadow(0 0 18px rgba(192,192,192,0.1)) drop-shadow(0 3px 10px rgba(0,0,0,0.5))",
           }}
         >
           <Image
@@ -313,32 +347,17 @@ export default function RocketLogo3D() {
           />
         </div>
 
-        {/* Trail */}
+        {/* Exhaust trail — above rocket since nose points down */}
         <div
           ref={trailRef}
           className="absolute bottom-full left-1/2 -translate-x-1/2"
           style={{
             width: "2px",
-            height: "35px",
+            height: "40px",
             background:
-              "linear-gradient(to top, rgba(192,192,192,0.5), rgba(192,192,192,0.08) 65%, transparent)",
+              "linear-gradient(to top, rgba(192,192,192,0.5), rgba(192,192,192,0.08) 60%, transparent)",
             filter: "blur(1px)",
             transformOrigin: "bottom center",
-          }}
-        />
-
-        {/* Orbit ring */}
-        <div
-          ref={ringRef}
-          className="absolute left-1/2"
-          style={{
-            top: "calc(100% + 4px)",
-            width: "90px",
-            height: "90px",
-            marginLeft: "-45px",
-            border: "1px solid rgba(192,192,192,0.12)",
-            borderRadius: "50%",
-            transform: "rotateX(65deg)",
           }}
         />
 
