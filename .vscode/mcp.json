@@ -1,0 +1,49 @@
+{
+  "servers": {
+
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+
+    // "playwright": {
+    //   "command": "npx",
+    //   "args": ["@playwright/mcp@latest"]
+    // },
+
+    "aceternityui": {
+      "command": "npx",
+      "args": ["-y", "aceternityui-mcp"]
+    },
+
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    },
+
+    // "tavily": {
+    //     "type": "http",
+    //     "url": "https://mcp.tavily.com/mcp/?tavilyApiKey=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"
+    // },
+    
+    // "stitch": {
+    //   "url": "https://stitch.googleapis.com/mcp",
+    //   "type": "http",
+    //   "headers": {
+    //     "Accept": "application/json",
+    //     "X-Goog-Api-Key": "AQ.Ab8RN6J4t3p-OSeWXXMUwRhGweW8Gj_36AqHszxZM8_v9Xoc9w"
+    //   }
+    // },
+
+
+    // "filesystem": {
+    //   "command": "npx",
+    //   "args": [
+    //     "-y",
+    //     "@modelcontextprotocol/server-filesystem",
+    //     "/Users/arnavsood/development/SACAR/sacar-website"
+    //   ]
+    // },
+
+  }
+}
